@@ -26,7 +26,7 @@ function App() {
   useEffect(() => {
     const restoreChatHistory = async () => {
       try {
-        const res = await fetch(`https://tetsting-deploy.onrender.com/chat?thread_id=${currentThreadId}`, {
+        const res = await fetch(`/chat?thread_id=${currentThreadId}`, {
           method: 'GET',
         });
 
@@ -86,7 +86,7 @@ function App() {
       // Add thread_id to form data
       formData.append('thread_id', currentThreadId);
 
-      const res = await fetch('https://tetsting-deploy.onrender.com/chat', {
+      const res = await fetch('/chat', {
         method: 'POST',
         body: formData,
       });
