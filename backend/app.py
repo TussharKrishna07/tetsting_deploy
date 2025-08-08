@@ -16,27 +16,52 @@ CORS(app)
 def chat():
     user_message = request.form.get("message", "")
     image_file = request.files.get("image", None)
+    document_file = request.files.get("document", None)
+    url = request.form.get("url", "")
     thread_id = request.form.get("thread_id", "1")
 
-    if not user_message.strip() and not image_file:
-        return jsonify({"error": "Message and image both are empty"}), 400
+    if not user_message.strip() and not image_file and not document_file and not url.strip():
+        return jsonify({"error": "Please provide a message, image, document, or URL"}), 400
 
+    # Handle image processing (existing functionality)
     image_data = None
-    mime_type = None
     if image_file is not None:
         image_bytes = image_file.read()
         image_data = base64.b64encode(image_bytes).decode("utf-8")
-        mime_type = image_file.mimetype
 
-    if image_data is None:
-        user_request = [
-            {"type": "text", "text": user_message},
-        ]
-    else:
-        user_request = [
-            {"type": "text", "text": user_message},
-            {"type": "image", "source_type": "base64", "data": image_data, "mime_type": "image/jpeg"},
-        ]
+    # Handle document processing - similar to images
+    document_data = None
+    document_mime_type = None
+    if document_file is not None:
+        document_bytes = document_file.read()
+        document_data = base64.b64encode(document_bytes).decode("utf-8")
+        document_mime_type = document_file.mimetype or "application/pdf"
+
+    # Handle URL processing
+    if url.strip():
+        if user_message.strip():
+            user_message += f"\n\nPlease analyze and summarize the content from this URL: {url}"
+        else:
+            user_message = f"Please analyze and summarize the content from this URL: {url}"
+
+    # Prepare user request based on available inputs
+    user_request = [{"type": "text", "text": user_message}]
+    
+    if image_data is not None:
+        user_request.append({
+            "type": "image", 
+            "source_type": "base64", 
+            "data": image_data, 
+            "mime_type": "image/jpeg"
+        })
+    
+    if document_data is not None:
+        user_request.append({
+            "type": "file",
+            "source_type": "base64", 
+            "data": document_data, 
+            "mime_type": document_mime_type
+        })
 
     try:
         reply = run_agent(user_request, thread_id)
@@ -52,8 +77,9 @@ def get_chat_state():
         state = get_state(thread_id)
 
         messages = []
-        if state.values.get("messages"):
-            for msg in state.values["messages"]:
+        state_dict = state.values if hasattr(state, 'values') else {}
+        if isinstance(state_dict, dict) and state_dict.get("messages"):
+            for msg in state_dict["messages"]:
                 if hasattr(msg, 'type') and msg.type == 'system':
                     continue
 

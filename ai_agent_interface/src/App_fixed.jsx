@@ -70,11 +70,7 @@ function App() {
   const sendMessage = async () => {
     const trimmed = message.trim();
     const urlTrimmed = url.trim();
-    
-    // Check if we have any content to send
-    if ((!trimmed && !image && !document && !urlTrimmed) || isLoading) {
-      return;
-    }
+    if (!trimmed && !image && !document && !urlTrimmed || isLoading) return;
 
     // Store the file URLs for display
     const imageUrl = image ? URL.createObjectURL(image) : null;
@@ -83,49 +79,37 @@ function App() {
     // Prepare display message
     let displayContent = trimmed;
     if (urlTrimmed) {
-      displayContent += `\n\nURL: ${urlTrimmed}`;
+      displayContent += urlTrimmed ? `\n\nURL: ${urlTrimmed}` : '';
     }
     if (documentName) {
       displayContent += `\n\nDocument: ${documentName}`;
     }
 
-    // Create message object
     const newMessage = { 
       role: 'user', 
       content: displayContent || (image ? 'Image uploaded' : (document ? 'Document uploaded' : 'URL provided')), 
       image: imageUrl,
       document: documentName
     };
-
-    // Clear inputs immediately to prevent duplicate submissions
-    const currentMessage = trimmed;
-    const currentUrl = urlTrimmed;
-    const currentImage = image;
-    const currentDocument = document;
-    
-    setMessage('');
-    setUrl('');
-    setImage(null);
-    setImagePreview(null);
-    setDocument(null);
-    setDocumentPreview(null);
     
     setChatHistory(prev => [...prev, newMessage]);
+    setMessage('');
+    setUrl('');
     setIsLoading(true);
 
     try {
       const formData = new FormData();
-      if (currentMessage) {
-        formData.append('message', currentMessage);
+      if (trimmed) {
+        formData.append('message', trimmed);
       }
-      if (currentImage) {
-        formData.append('image', currentImage);
+      if (image) {
+        formData.append('image', image);
       }
-      if (currentDocument) {
-        formData.append('document', currentDocument);
+      if (document) {
+        formData.append('document', document);
       }
-      if (currentUrl) {
-        formData.append('url', currentUrl);
+      if (urlTrimmed) {
+        formData.append('url', urlTrimmed);
       }
       // Add thread_id to form data
       formData.append('thread_id', currentThreadId);
@@ -141,7 +125,7 @@ function App() {
           const errorData = await res.json();
           errorText = errorData.error || errorText;
         } catch {
-          errorText = `Server error: ${res.status} ${res.statusText}`;
+          errorText = res.statusText || errorText;
         }
         throw new Error(errorText);
       }
@@ -150,23 +134,20 @@ function App() {
       const replyContent = typeof data.reply === 'string' ? data.reply : 'No valid response.';
       setChatHistory(prev => [...prev, { role: 'assistant', content: replyContent }]);
     } catch (error) {
-      console.error('Chat error:', error);
       setChatHistory(prev => [...prev, { role: 'assistant', content: `Error: ${error.message}` }]);
     } finally {
       setIsLoading(false);
+      setImage(null);
+      setImagePreview(null);
+      setDocument(null);
+      setDocumentPreview(null);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const trimmed = message.trim();
-      const urlTrimmed = url.trim();
-      
-      // Only send if we have content
-      if (trimmed || image || document || urlTrimmed) {
-        sendMessage();
-      }
+      sendMessage();
     }
   };
 
