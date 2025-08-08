@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build React frontend
-cd frontend
+cd ai_agent_interface
 npm install
 npm run build
 cd ..
