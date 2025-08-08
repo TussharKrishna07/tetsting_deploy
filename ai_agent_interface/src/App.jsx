@@ -228,6 +228,7 @@ function App() {
     { id: 'conversation', name: 'Conversation', icon: '💬' },
     { id: 'images', name: 'Image Analysis', icon: '🖼️' },
     { id: 'documents', name: 'Document Summary', icon: '📄' },
+    { id: 'audio', name: 'Audio Transcription', icon: '🎵' },
     { id: 'research', name: 'Research', icon: '🔍' },
     { id: 'general', name: 'General Chat', icon: '🤖' },
   ];
@@ -333,6 +334,11 @@ function App() {
                   <span className="feature-icon">📄</span>
                   <div className="feature-title">Document Summarization</div>
                   <div className="feature-description">Extract insights from PDFs, docs, and web content</div>
+                </div>
+                <div className="feature-card">
+                  <span className="feature-icon">🎵</span>
+                  <div className="feature-title">Audio Transcription & Diarization</div>
+                  <div className="feature-description">Transcribe speech and identify up to 2 speakers</div>
                 </div>
               </div>
             </div>
