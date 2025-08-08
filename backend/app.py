@@ -17,11 +17,12 @@ def chat():
     user_message = request.form.get("message", "")
     image_file = request.files.get("image", None)
     document_file = request.files.get("document", None)
+    audio_file = request.files.get("audio", None)
     url = request.form.get("url", "")
     thread_id = request.form.get("thread_id", "1")
 
-    if not user_message.strip() and not image_file and not document_file and not url.strip():
-        return jsonify({"error": "Please provide a message, image, document, or URL"}), 400
+    if not user_message.strip() and not image_file and not document_file and not audio_file and not url.strip():
+        return jsonify({"error": "Please provide a message, image, document, audio, or URL"}), 400
 
     # Handle image processing (existing functionality)
     image_data = None
@@ -36,6 +37,14 @@ def chat():
         document_bytes = document_file.read()
         document_data = base64.b64encode(document_bytes).decode("utf-8")
         document_mime_type = document_file.mimetype or "application/pdf"
+
+    # Handle audio processing
+    audio_data = None
+    audio_mime_type = None
+    if audio_file is not None:
+        audio_bytes = audio_file.read()
+        audio_data = base64.b64encode(audio_bytes).decode("utf-8")
+        audio_mime_type = audio_file.mimetype or "audio/wav"
 
     # Handle URL processing
     if url.strip():
@@ -61,6 +70,14 @@ def chat():
             "source_type": "base64", 
             "data": document_data, 
             "mime_type": document_mime_type
+        })
+    
+    if audio_data is not None:
+        user_request.append({
+            "type": "audio",
+            "source_type": "base64", 
+            "data": audio_data, 
+            "mime_type": audio_mime_type
         })
 
     try:

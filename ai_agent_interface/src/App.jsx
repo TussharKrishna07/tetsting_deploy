@@ -11,6 +11,8 @@ function App() {
   const [imagePreview, setImagePreview] = useState(null);
   const [document, setDocument] = useState(null);
   const [documentPreview, setDocumentPreview] = useState(null);
+  const [audio, setAudio] = useState(null);
+  const [audioPreview, setAudioPreview] = useState(null);
   const [url, setUrl] = useState('');
   const [currentThreadId, setCurrentThreadId] = useState('1');
   const [chatThreads, setChatThreads] = useState([
@@ -72,13 +74,14 @@ function App() {
     const urlTrimmed = url.trim();
     
     // Check if we have any content to send
-    if ((!trimmed && !image && !document && !urlTrimmed) || isLoading) {
+    if ((!trimmed && !image && !document && !audio && !urlTrimmed) || isLoading) {
       return;
     }
 
     // Store the file URLs for display
     const imageUrl = image ? URL.createObjectURL(image) : null;
     const documentName = document ? document.name : null;
+    const audioName = audio ? audio.name : null;
     
     // Prepare display message
     let displayContent = trimmed;
@@ -88,13 +91,17 @@ function App() {
     if (documentName) {
       displayContent += `\n\nDocument: ${documentName}`;
     }
+    if (audioName) {
+      displayContent += `\n\nAudio: ${audioName}`;
+    }
 
     // Create message object
     const newMessage = { 
       role: 'user', 
-      content: displayContent || (image ? 'Image uploaded' : (document ? 'Document uploaded' : 'URL provided')), 
+      content: displayContent || (image ? 'Image uploaded' : (document ? 'Document uploaded' : (audio ? 'Audio uploaded' : 'URL provided'))), 
       image: imageUrl,
-      document: documentName
+      document: documentName,
+      audio: audioName
     };
 
     // Clear inputs immediately to prevent duplicate submissions
@@ -102,6 +109,7 @@ function App() {
     const currentUrl = urlTrimmed;
     const currentImage = image;
     const currentDocument = document;
+    const currentAudio = audio;
     
     setMessage('');
     setUrl('');
@@ -109,6 +117,8 @@ function App() {
     setImagePreview(null);
     setDocument(null);
     setDocumentPreview(null);
+    setAudio(null);
+    setAudioPreview(null);
     
     setChatHistory(prev => [...prev, newMessage]);
     setIsLoading(true);
@@ -123,6 +133,9 @@ function App() {
       }
       if (currentDocument) {
         formData.append('document', currentDocument);
+      }
+      if (currentAudio) {
+        formData.append('audio', currentAudio);
       }
       if (currentUrl) {
         formData.append('url', currentUrl);
@@ -164,7 +177,7 @@ function App() {
       const urlTrimmed = url.trim();
       
       // Only send if we have content
-      if (trimmed || image || document || urlTrimmed) {
+      if (trimmed || image || document || audio || urlTrimmed) {
         sendMessage();
       }
     }
@@ -198,6 +211,19 @@ function App() {
     setDocumentPreview(null);
   };
 
+  const handleAudioChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAudio(file);
+      setAudioPreview(file.name);
+    }
+  };
+
+  const handleRemoveAudio = () => {
+    setAudio(null);
+    setAudioPreview(null);
+  };
+
   const categories = [
     { id: 'conversation', name: 'Conversation', icon: '💬' },
     { id: 'images', name: 'Image Analysis', icon: '🖼️' },
@@ -209,6 +235,7 @@ function App() {
   const quickActions = [
     { text: "Analyze this image for me", icon: "🖼️" },
     { text: "Summarize this document", icon: "📄" },
+    { text: "Transcribe and analyze this audio", icon: "🎵" },
     { text: "Help me understand this URL", icon: "🌐" },
     { text: "Let's have a conversation", icon: "💬" }
   ];
@@ -288,8 +315,8 @@ function App() {
               <div className="welcome-icon">🤖</div>
               <h2 className="welcome-title">Welcome to AI Assistant! ✨</h2>
               <p className="welcome-subtitle">
-                Your multimodal AI companion for conversation, image analysis, and document processing.<br />
-                Upload images, documents, share URLs, or just chat! 💬
+                Your multimodal AI companion for conversation, image analysis, document processing, and audio transcription.<br />
+                Upload images, documents, audio files, share URLs, or just chat! 💬
               </p>
               <div className="feature-grid">
                 <div className="feature-card">
@@ -330,6 +357,12 @@ function App() {
                   <div className="message-document">
                     <span className="document-icon">📄</span>
                     <span className="document-name">{msg.document}</span>
+                  </div>
+                )}
+                {msg.audio && (
+                  <div className="message-audio">
+                    <span className="audio-icon">🎵</span>
+                    <span className="audio-name">{msg.audio}</span>
                   </div>
                 )}
                 <div className="message-text">
@@ -383,6 +416,17 @@ function App() {
             </div>
           )}
 
+          {audioPreview && (
+            <div className="audio-preview">
+              <div className="preview-header">
+                <span className="preview-label">🎵 Audio attached: {audioPreview}</span>
+                <button onClick={handleRemoveAudio} className="remove-audio-btn">
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* URL Input */}
           <div className="url-input-container">
             <input
@@ -425,9 +469,19 @@ function App() {
               />
               📄
             </label>
+            <label className="file-input-btn" title="Upload audio (MP3, WAV, M4A)">
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={handleAudioChange}
+                disabled={isLoading}
+                style={{ display: 'none' }}
+              />
+              🎵
+            </label>
             <button
               onClick={sendMessage}
-              disabled={isLoading || (!message.trim() && !image && !document && !url.trim())}
+              disabled={isLoading || (!message.trim() && !image && !document && !audio && !url.trim())}
               className="send-button"
               title="Send message"
             >
