@@ -1,14 +1,14 @@
 import os
 import base64
-import httpx
-from io import BytesIO
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from conversational_agent import run_agent
-from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+
+# Load environment variables
 load_dotenv()
-# Serve React build folder
+
+# Create Flask app and serve React build folder
 app = Flask(__name__, static_folder="dist", static_url_path="")
 CORS(app)
 

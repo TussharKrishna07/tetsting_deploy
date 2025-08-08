@@ -3,31 +3,47 @@ import ReactMarkdown from 'react-markdown';
 import './App.css';
 
 function App() {
-  const [message, setMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const chatHistoryRef = useRef(null);
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [document, setDocument] = useState(null);
-  const [documentPreview, setDocumentPreview] = useState(null);
-  const [audio, setAudio] = useState(null);
-  const [audioPreview, setAudioPreview] = useState(null);
-  const [url, setUrl] = useState('');
-  const [currentThreadId, setCurrentThreadId] = useState('1');
-  const [chatThreads, setChatThreads] = useState([
+  // ================================
+  // STATE MANAGEMENT
+  // ================================
+  
+  // Chat-related state
+  const [message, setMessage] = useState('');                    // Current text message input
+  const [chatHistory, setChatHistory] = useState([]);            // Array of all messages in current thread
+  const [isLoading, setIsLoading] = useState(false);             // Loading state for API calls
+  const chatHistoryRef = useRef(null);                           // Ref for auto-scrolling chat
+  
+  // File upload state
+  const [image, setImage] = useState(null);                      // Selected image file
+  const [imagePreview, setImagePreview] = useState(null);        // Image preview URL
+  const [document, setDocument] = useState(null);                // Selected document file
+  const [documentPreview, setDocumentPreview] = useState(null);  // Document name preview
+  const [audio, setAudio] = useState(null);                      // Selected audio file
+  const [audioPreview, setAudioPreview] = useState(null);        // Audio name preview
+  const [url, setUrl] = useState('');                            // URL input for web content/documents
+  
+  // Thread management state
+  const [currentThreadId, setCurrentThreadId] = useState('1');   // Active conversation thread ID
+  const [chatThreads, setChatThreads] = useState([               // List of all conversation threads
     { id: '1', name: 'Chat Session 1', createdAt: new Date().toISOString() }
   ]);
-  const [theme, setTheme] = useState('light');
-  const [sidebarToggled, setSidebarToggled] = useState(false);
+  
+  // UI state
+  const [theme, setTheme] = useState('light');                   // App theme (currently unused)
+  const [sidebarToggled, setSidebarToggled] = useState(false);   // Sidebar toggle state
 
+  // ================================
+  // EFFECTS
+  // ================================
+
+  // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
   }, [chatHistory]);
 
-  // Load chat history when thread changes
+  // Load chat history when switching between conversation threads
   useEffect(() => {
     const restoreChatHistory = async () => {
       try {
@@ -69,21 +85,26 @@ function App() {
     restoreChatHistory();
   }, [currentThreadId]);
 
+  // ================================
+  // MESSAGE HANDLING
+  // ================================
+
+  // Main function to send message with multimodal content to backend
   const sendMessage = async () => {
     const trimmed = message.trim();
     const urlTrimmed = url.trim();
     
-    // Check if we have any content to send
+    // Validation: Check if we have any content to send
     if ((!trimmed && !image && !document && !audio && !urlTrimmed) || isLoading) {
       return;
     }
 
-    // Store the file URLs for display
+    // Prepare file URLs for display in chat history
     const imageUrl = image ? URL.createObjectURL(image) : null;
     const documentName = document ? document.name : null;
     const audioName = audio ? audio.name : null;
     
-    // Prepare display message
+    // Build display content with all attached items
     let displayContent = trimmed;
     if (urlTrimmed) {
       displayContent += `\n\nURL: ${urlTrimmed}`;
@@ -95,7 +116,7 @@ function App() {
       displayContent += `\n\nAudio: ${audioName}`;
     }
 
-    // Create message object
+    // Create user message object for chat history
     const newMessage = { 
       role: 'user', 
       content: displayContent || (image ? 'Image uploaded' : (document ? 'Document uploaded' : (audio ? 'Audio uploaded' : 'URL provided'))), 
@@ -104,13 +125,14 @@ function App() {
       audio: audioName
     };
 
-    // Clear inputs immediately to prevent duplicate submissions
+    // Capture current values before clearing state to prevent race conditions
     const currentMessage = trimmed;
     const currentUrl = urlTrimmed;
     const currentImage = image;
     const currentDocument = document;
     const currentAudio = audio;
     
+    // Clear all input fields immediately to prevent duplicate submissions
     setMessage('');
     setUrl('');
     setImage(null);
@@ -120,10 +142,12 @@ function App() {
     setAudio(null);
     setAudioPreview(null);
     
+    // Add message to chat history and set loading state
     setChatHistory(prev => [...prev, newMessage]);
     setIsLoading(true);
 
     try {
+      // Build FormData with all captured values
       const formData = new FormData();
       if (currentMessage) {
         formData.append('message', currentMessage);
@@ -140,14 +164,15 @@ function App() {
       if (currentUrl) {
         formData.append('url', currentUrl);
       }
-      // Add thread_id to form data
       formData.append('thread_id', currentThreadId);
 
+      // Send request to backend
       const res = await fetch('/chat', {
         method: 'POST',
         body: formData,
       });
 
+      // Handle response errors
       if (!res.ok) {
         let errorText = 'Network error';
         try {
@@ -159,40 +184,50 @@ function App() {
         throw new Error(errorText);
       }
 
+      // Parse response and add AI reply to chat history
       const data = await res.json();
       const replyContent = typeof data.reply === 'string' ? data.reply : 'No valid response.';
       setChatHistory(prev => [...prev, { role: 'assistant', content: replyContent }]);
     } catch (error) {
+      // Handle errors by adding error message to chat
       console.error('Chat error:', error);
       setChatHistory(prev => [...prev, { role: 'assistant', content: `Error: ${error.message}` }]);
     } finally {
+      // Always reset loading state
       setIsLoading(false);
     }
   };
 
+  // ================================
+  // INPUT HANDLERS
+  // ================================
+
+  // Handle Enter key press to send message (Shift+Enter for new line)
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
       e.preventDefault();
       const trimmed = message.trim();
       const urlTrimmed = url.trim();
       
-      // Only send if we have content
+      // Only send if we have any content
       if (trimmed || image || document || audio || urlTrimmed) {
         sendMessage();
       }
     }
   };
 
+  // Handle image file selection and create preview
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImage(file);
-      // Create preview URL
+      // Create preview URL for display
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
     }
   };
 
+  // Handle document file selection
   const handleDocumentChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -201,16 +236,19 @@ function App() {
     }
   };
 
+  // Remove selected image and clear preview
   const handleRemoveImage = () => {
     setImage(null);
     setImagePreview(null);
   };
 
+  // Remove selected document and clear preview
   const handleRemoveDocument = () => {
     setDocument(null);
     setDocumentPreview(null);
   };
 
+  // Handle audio file selection
   const handleAudioChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -219,11 +257,17 @@ function App() {
     }
   };
 
+  // Remove selected audio and clear preview
   const handleRemoveAudio = () => {
     setAudio(null);
     setAudioPreview(null);
   };
 
+  // ================================
+  // UI CONFIGURATION
+  // ================================
+
+  // Feature categories for sidebar (currently unused in UI)
   const categories = [
     { id: 'conversation', name: 'Conversation', icon: '💬' },
     { id: 'images', name: 'Image Analysis', icon: '🖼️' },
@@ -233,6 +277,7 @@ function App() {
     { id: 'general', name: 'General Chat', icon: '🤖' },
   ];
 
+  // Quick action suggestions displayed in welcome screen
   const quickActions = [
     { text: "Analyze this image for me", icon: "🖼️" },
     { text: "Summarize this document", icon: "📄" },
@@ -241,10 +286,21 @@ function App() {
     { text: "Let's have a conversation", icon: "💬" }
   ];
 
+  // ================================
+  // THREAD MANAGEMENT
+  // ================================
+
+  // Toggle theme (currently unused)
+  // ================================
+  // THREAD MANAGEMENT
+  // ================================
+
+  // Toggle theme (currently unused)
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
   };
 
+  // Create a new chat thread with unique ID
   const createNewChat = () => {
     // Generate new thread ID by incrementing the highest existing ID
     const existingIds = chatThreads.map(thread => parseInt(thread.id));
@@ -267,19 +323,28 @@ function App() {
     setChatHistory([]);
   };
 
+  // Switch to an existing chat thread
   const switchToThread = (threadId) => {
     setCurrentThreadId(threadId);
     // Chat history will be loaded automatically by useEffect
   };
 
+  // Format thread display name with creation date
   const formatThreadName = (thread) => {
     const date = new Date(thread.createdAt);
     return `${thread.name} - ${date.toLocaleDateString()}`;
   };
 
+  // ================================
+  // MAIN COMPONENT RENDER
+  // ================================
+
   return (
     <div className="app">
-      {/* Sidebar */}
+      {/* 
+        LEFT SIDEBAR: Chat thread management and navigation
+        Contains new chat button and list of previous chat sessions
+      */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="sidebar-title">🤖 AI Assistant</div>
@@ -303,14 +368,20 @@ function App() {
         </div>
       </aside>
 
-      {/* Main Chat Area */}
+      {/* 
+        MAIN CHAT AREA: Message display and input interface
+        Contains chat header, message history, and input controls
+      */}
       <main className="main-content">
+        {/* Chat header with current session info */}
         <header className="chat-header">
           <div className="chat-title">🤖 AI Assistant Chat</div>
           <div className="chat-subtitle">Session: {chatThreads.find(t => t.id === currentThreadId)?.name || 'Chat Session'}</div>
         </header>
 
+        {/* Messages container with scrollable chat history */}
         <div className="messages-container" ref={chatHistoryRef}>
+          {/* Welcome screen shown when no messages exist */}
           {chatHistory.length === 0 && !isLoading && (
             <div className="welcome-screen">
               <div className="welcome-icon">🤖</div>
@@ -319,6 +390,7 @@ function App() {
                 Your multimodal AI companion for conversation, image analysis, document processing, and audio transcription.<br />
                 Upload images, documents, audio files, share URLs, or just chat! 💬
               </p>
+              {/* Feature showcase grid */}
               <div className="feature-grid">
                 <div className="feature-card">
                   <span className="feature-icon">💬</span>
@@ -344,12 +416,15 @@ function App() {
             </div>
           )}
 
+          {/* Render each message in the chat history */}
           {chatHistory.map((msg, index) => (
             <div key={index} className={`message ${msg.role}`}>
+              {/* Message avatar (user or AI) */}
               <div className="message-avatar">
                 {msg.role === 'user' ? '👤' : '🤖'}
               </div>
               <div className="message-content">
+                {/* Display attached image if present */}
                 {msg.image && (
                   <div className="message-image">
                     <img
@@ -359,18 +434,21 @@ function App() {
                     />
                   </div>
                 )}
+                {/* Display attached document if present */}
                 {msg.document && (
                   <div className="message-document">
                     <span className="document-icon">📄</span>
                     <span className="document-name">{msg.document}</span>
                   </div>
                 )}
+                {/* Display attached audio if present */}
                 {msg.audio && (
                   <div className="message-audio">
                     <span className="audio-icon">🎵</span>
                     <span className="audio-name">{msg.audio}</span>
                   </div>
                 )}
+                {/* Message text content with Markdown support */}
                 <div className="message-text">
                   <ReactMarkdown
                     components={{
@@ -386,6 +464,7 @@ function App() {
             </div>
           ))}
 
+          {/* Typing indicator shown when AI is processing */}
           {isLoading && (
             <div className="typing-indicator">
               <div className="message-avatar">🤖</div>
@@ -398,7 +477,12 @@ function App() {
           )}
         </div>
 
+        {/* 
+          INPUT AREA: File previews, URL input, message input, and send controls
+          Shows previews of attached files and provides all input methods
+        */}
         <div className="input-area">
+          {/* Image preview with remove option */}
           {imagePreview && (
             <div className="image-preview">
               <div className="preview-header">
@@ -411,6 +495,7 @@ function App() {
             </div>
           )}
           
+          {/* Document preview with remove option */}
           {documentPreview && (
             <div className="document-preview">
               <div className="preview-header">
@@ -422,6 +507,7 @@ function App() {
             </div>
           )}
 
+          {/* Audio preview with remove option */}
           {audioPreview && (
             <div className="audio-preview">
               <div className="preview-header">
@@ -433,7 +519,7 @@ function App() {
             </div>
           )}
 
-          {/* URL Input */}
+          {/* URL input field for document/webpage summarization */}
           <div className="url-input-container">
             <input
               type="url"
@@ -445,7 +531,9 @@ function App() {
             />
           </div>
 
+          {/* Main input container with message box and file upload buttons */}
           <div className="input-container">
+            {/* Text message input with Enter key support */}
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -455,6 +543,8 @@ function App() {
               rows="1"
               className="message-input"
             />
+            
+            {/* Image upload button (hidden file input with custom styling) */}
             <label className="file-input-btn" title="Upload image">
               <input
                 type="file"
@@ -465,6 +555,8 @@ function App() {
               />
               📸
             </label>
+            
+            {/* Document upload button (PDF, Word docs) */}
             <label className="file-input-btn" title="Upload document (PDF, Word)">
               <input
                 type="file"
@@ -475,6 +567,8 @@ function App() {
               />
               📄
             </label>
+            
+            {/* Audio upload button (MP3, WAV, M4A) */}
             <label className="file-input-btn" title="Upload audio (MP3, WAV, M4A)">
               <input
                 type="file"
@@ -485,6 +579,8 @@ function App() {
               />
               🎵
             </label>
+            
+            {/* Send button - disabled when loading or no content */}
             <button
               onClick={sendMessage}
               disabled={isLoading || (!message.trim() && !image && !document && !audio && !url.trim())}
