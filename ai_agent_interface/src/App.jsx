@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import LoginPage from './components/LoginPage';
 import './App.css';
 
 function App() {
   // ================================
   // STATE MANAGEMENT
   // ================================
+  
+  // Authentication state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);           // Login status
+  const [currentUser, setCurrentUser] = useState('');           // Logged in username
   
   // Chat-related state
   const [message, setMessage] = useState('');                    // Current text message input
@@ -300,6 +305,13 @@ function App() {
     setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
   };
 
+  // Handle successful login - accepts any username/password combination
+  const handleLogin = (username) => {
+    setCurrentUser(username);
+    setIsLoggedIn(true);
+    console.log(`User logged in: ${username}`);
+  };
+
   // Create a new chat thread with unique ID
   const createNewChat = () => {
     // Generate new thread ID by incrementing the highest existing ID
@@ -339,6 +351,12 @@ function App() {
   // MAIN COMPONENT RENDER
   // ================================
 
+  // Show login page if user is not logged in
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  // Show main chat interface if user is logged in
   return (
     <div className="app">
       {/* 
@@ -349,6 +367,7 @@ function App() {
         <div className="sidebar-header">
           <div className="sidebar-title">🤖 AI Assistant</div>
           <div className="sidebar-subtitle">Multimodal AI Companion</div>
+          <div className="user-info">Welcome, {currentUser}! 👋</div>
         </div>
         
         <button className="new-chat-button" onClick={createNewChat}>
