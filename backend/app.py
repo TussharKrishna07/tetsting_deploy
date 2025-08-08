@@ -1,7 +1,6 @@
 import os
 import base64
 import httpx
-from PIL import Image
 from io import BytesIO
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
