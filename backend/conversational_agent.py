@@ -8,10 +8,10 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from tools import search_tool
 from dotenv import load_dotenv
-
 import os
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Load environment variables from .env file
 load_dotenv()

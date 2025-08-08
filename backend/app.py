@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 load_dotenv()
 # Serve React build folder
-app = Flask(__name__, static_folder="../frontend/build", static_url_path="/")
+app = Flask(__name__, static_folder="dist", static_url_path="")
 CORS(app)
 
 @app.route('/chat', methods=['POST'])
@@ -86,13 +86,13 @@ def get_chat_state():
         return jsonify({"error": str(e), "messages": []}), 500
 
 # Serve React frontend
-@app.route('/')
-def serve_react():
-    return send_from_directory(app.static_folder, 'index.html')
+@app.route("/")
+def index():
+    return send_from_directory(app.static_folder, "index.html")
 
 @app.errorhandler(404)
 def not_found(e):
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, "index.html")
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
